@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Calendar, Clock, CheckCircle, XCircle, MapPin, Download, Filter } from 'lucide-react';
 import { Attendance } from '../../types';
 import { useAuth } from '../../context/AuthContext';
@@ -9,52 +9,34 @@ const AttendanceManagement: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [selectedEmployee, setSelectedEmployee] = useState('all');
   const [showMarkModal, setShowMarkModal] = useState(false);
+  const [attendanceRecords, setAttendanceRecords] = useState<Attendance[]>([]);
+  const [employees, setEmployees] = useState<{ id: string; name: string }[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const attendanceRecords: Attendance[] = [
-    {
-      id: '1',
-      employeeId: '1',
-      date: '2024-01-15',
-      checkIn: '09:00',
-      checkOut: '17:30',
-      status: 'present',
-      hours: 8.5,
-    },
-    {
-      id: '2',
-      employeeId: '1',
-      date: '2024-01-16',
-      checkIn: '09:15',
-      checkOut: '17:45',
-      status: 'late',
-      hours: 8.5,
-    },
-    {
-      id: '3',
-      employeeId: '2',
-      date: '2024-01-15',
-      checkIn: '08:45',
-      checkOut: '17:15',
-      status: 'present',
-      hours: 8.5,
-    },
-    {
-      id: '4',
-      employeeId: '3',
-      date: '2024-01-15',
-      checkIn: '',
-      checkOut: '',
-      status: 'absent',
-      hours: 0,
-    },
-  ];
-
-  const employees = [
-    { id: '1', name: 'John Doe' },
-    { id: '2', name: 'Sarah Johnson' },
-    { id: '3', name: 'Mike Chen' },
-    { id: '4', name: 'Emily Davis' },
-  ];
+  useEffect(() => {
+    setLoading(true);
+    setError(null);
+    Promise.all([
+      fetch('https://office-mangement-ss17.onrender.com/attendance').then(res => {
+        if (!res.ok) throw new Error('Failed to fetch attendance records');
+        return res.json();
+      }),
+      fetch('https://office-mangement-ss17.onrender.com/employees').then(res => {
+        if (!res.ok) throw new Error('Failed to fetch employees');
+        return res.json();
+      })
+    ])
+      .then(([attendanceData, employeesData]) => {
+        setAttendanceRecords(attendanceData);
+        setEmployees(employeesData.map((e: any) => ({ id: e.id, name: e.name })));
+        setLoading(false);
+      })
+      .catch(err => {
+        setError(err.message);
+        setLoading(false);
+      });
+  }, []);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -264,36 +246,46 @@ const AttendanceManagement: React.FC = () => {
         {/* Recent Records */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
           <h2 className="text-xl font-semibold text-gray-900 mb-4">Recent Records</h2>
-          <div className="space-y-4">
-            {attendanceRecords.slice(0, 10).map((record) => {
-              const employee = employees.find(e => e.id === record.employeeId);
-              return (
-                <div key={record.id} className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg transition-colors">
-                  <div className="flex items-center space-x-3">
-                    {getStatusIcon(record.status)}
-                    <div>
-                      <p className="text-sm font-medium text-gray-900">
-                        {user?.role === 'admin' ? employee?.name : 'You'}
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        {new Date(record.date).toLocaleDateString()}
-                      </p>
+          {loading ? (
+            <div className="text-center py-12">
+              <p className="text-gray-500">Loading attendance records...</p>
+            </div>
+          ) : error ? (
+            <div className="text-center py-12">
+              <p className="text-red-500">{error}</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {attendanceRecords.slice(0, 10).map((record) => {
+                const employee = employees.find(e => e.id === record.employeeId);
+                return (
+                  <div key={record.id} className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg transition-colors">
+                    <div className="flex items-center space-x-3">
+                      {getStatusIcon(record.status)}
+                      <div>
+                        <p className="text-sm font-medium text-gray-900">
+                          {user?.role === 'admin' ? employee?.name : 'You'}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {new Date(record.date).toLocaleDateString()}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(record.status)}`}>
+                        {record.status}
+                      </span>
+                      {record.checkIn && (
+                        <p className="text-xs text-gray-500 mt-1">
+                          {record.checkIn} - {record.checkOut || 'Active'}
+                        </p>
+                      )}
                     </div>
                   </div>
-                  <div className="text-right">
-                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(record.status)}`}>
-                      {record.status}
-                    </span>
-                    {record.checkIn && (
-                      <p className="text-xs text-gray-500 mt-1">
-                        {record.checkIn} - {record.checkOut || 'Active'}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
 

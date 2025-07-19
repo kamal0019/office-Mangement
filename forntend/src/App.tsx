@@ -11,6 +11,8 @@ import LeaveManagement from './components/Leave/LeaveManagement';
 import AttendanceManagement from './components/Attendance/AttendanceManagement';
 import PayrollManagement from './components/Payroll/PayrollManagement';
 import NotificationCenter from './components/Notifications/NotificationCenter';
+import SignupForm from './components/Auth/SignupForm';
+import ForgotPasswordForm from './components/Auth/ForgotPasswordForm';
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, isLoading } = useAuth();
@@ -41,6 +43,8 @@ function App() {
         <Layout>
           <Routes>
             <Route path="/login" element={<LoginForm />} />
+            <Route path="/signup" element={<SignupForm />} />
+            <Route path="/forgot-password" element={<ForgotPasswordForm />} />
             <Route path="/dashboard" element={
               <ProtectedRoute>
                 <Dashboard />

@@ -6,6 +6,7 @@ interface AuthContextType {
   login: (email: string, password: string, role: 'admin' | 'employee') => Promise<void>;
   logout: () => void;
   isLoading: boolean;
+  token: string | null;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -20,13 +21,16 @@ export const useAuth = () => {
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Check for stored user session
+    // Check for stored user session and token
     const storedUser = localStorage.getItem('user');
-    if (storedUser) {
+    const storedToken = localStorage.getItem('token');
+    if (storedUser && storedToken) {
       setUser(JSON.parse(storedUser));
+      setToken(storedToken);
     }
     setIsLoading(false);
   }, []);
@@ -34,22 +38,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = async (email: string, password: string, role: 'admin' | 'employee') => {
     setIsLoading(true);
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      const mockUser: User = {
-        id: '1',
-        name: role === 'admin' ? 'Admin User' : 'John Doe',
-        email,
-        role,
-        department: role === 'employee' ? 'Engineering' : undefined,
-        position: role === 'employee' ? 'Software Developer' : undefined,
-      };
-
-      setUser(mockUser);
-      localStorage.setItem('user', JSON.stringify(mockUser));
-    } catch (error) {
-      throw new Error('Login failed');
+      const endpoint =
+        role === 'admin'
+          ? 'https://office-mangement-ss17.onrender.com/admin/login'
+          : 'https://office-mangement-ss17.onrender.com/employee/login';
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+      if (!res.ok) throw new Error('Login failed');
+      const data = await res.json();
+      // Expecting { token, user } or similar structure
+      setUser(data.user);
+      setToken(data.token);
+      localStorage.setItem('user', JSON.stringify(data.user));
+      localStorage.setItem('token', data.token);
+    } catch (error: any) {
+      throw new Error(error.message || 'Login failed');
     } finally {
       setIsLoading(false);
     }
@@ -57,11 +63,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logout = () => {
     setUser(null);
+    setToken(null);
     localStorage.removeItem('user');
+    localStorage.removeItem('token');
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, isLoading }}>
+    <AuthContext.Provider value={{ user, login, logout, isLoading, token }}>
       {children}
     </AuthContext.Provider>
   );

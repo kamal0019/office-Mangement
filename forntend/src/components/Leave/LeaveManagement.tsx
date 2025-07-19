@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Plus, Search, Filter, Calendar, User, Clock, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
 import { Leave } from '../../types';
 import { useAuth } from '../../context/AuthContext';
@@ -9,45 +9,30 @@ const LeaveManagement: React.FC = () => {
   const [selectedStatus, setSelectedStatus] = useState('all');
   const [selectedType, setSelectedType] = useState('all');
   const [showCreateModal, setShowCreateModal] = useState(false);
-
-  const leaves: Leave[] = [
-    {
-      id: '1',
-      employeeId: '1',
-      employeeName: 'John Doe',
-      type: 'vacation',
-      startDate: '2024-02-01',
-      endDate: '2024-02-05',
-      reason: 'Family vacation to Europe',
-      status: 'pending',
-      appliedAt: '2024-01-15',
-    },
-    {
-      id: '2',
-      employeeId: '2',
-      employeeName: 'Sarah Johnson',
-      type: 'sick',
-      startDate: '2024-01-20',
-      endDate: '2024-01-22',
-      reason: 'Flu symptoms and recovery',
-      status: 'approved',
-      appliedAt: '2024-01-18',
-    },
-    {
-      id: '3',
-      employeeId: '3',
-      employeeName: 'Mike Chen',
-      type: 'personal',
-      startDate: '2024-01-25',
-      endDate: '2024-01-25',
-      reason: 'Personal appointment',
-      status: 'rejected',
-      appliedAt: '2024-01-20',
-    },
-  ];
+  const [leaves, setLeaves] = useState<Leave[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const statuses = ['all', 'pending', 'approved', 'rejected'];
   const types = ['all', 'sick', 'vacation', 'personal', 'emergency'];
+
+  useEffect(() => {
+    setLoading(true);
+    setError(null);
+    fetch('https://office-mangement-ss17.onrender.com/leaves')
+      .then(res => {
+        if (!res.ok) throw new Error('Failed to fetch leaves');
+        return res.json();
+      })
+      .then(data => {
+        setLeaves(data);
+        setLoading(false);
+      })
+      .catch(err => {
+        setError(err.message);
+        setLoading(false);
+      });
+  }, []);
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -211,67 +196,72 @@ const LeaveManagement: React.FC = () => {
           </div>
         </div>
 
-        <div className="p-6">
-          <div className="grid gap-4">
-            {filteredLeaves.map((leave) => (
-              <div key={leave.id} className="border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-3 mb-2">
-                      <h3 className="text-lg font-semibold text-gray-900">{leave.employeeName}</h3>
-                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${getTypeColor(leave.type)}`}>
-                        {leave.type}
-                      </span>
+        {loading ? (
+          <div className="text-center py-12">
+            <p className="text-gray-500">Loading leaves...</p>
+          </div>
+        ) : error ? (
+          <div className="text-center py-12">
+            <p className="text-red-500">{error}</p>
+          </div>
+        ) : (
+          <div className="p-6">
+            <div className="grid gap-4">
+              {filteredLeaves.map((leave) => (
+                <div key={leave.id} className="border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex-1">
+                      <div className="flex items-center space-x-3 mb-2">
+                        <h3 className="text-lg font-semibold text-gray-900">{leave.employeeName}</h3>
+                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${getTypeColor(leave.type)}`}>
+                          {leave.type}
+                        </span>
+                      </div>
+                      <p className="text-gray-600 mb-3">{leave.reason}</p>
+                      <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500">
+                        <div className="flex items-center space-x-1">
+                          <Calendar className="h-4 w-4" />
+                          <span>{new Date(leave.startDate).toLocaleDateString()} - {new Date(leave.endDate).toLocaleDateString()}</span>
+                        </div>
+                        <div className="flex items-center space-x-1">
+                          <Clock className="h-4 w-4" />
+                          <span>{calculateDays(leave.startDate, leave.endDate)} days</span>
+                        </div>
+                        <div className="flex items-center space-x-1">
+                          <User className="h-4 w-4" />
+                          <span>Applied: {new Date(leave.appliedAt).toLocaleDateString()}</span>
+                        </div>
+                      </div>
                     </div>
-                    <p className="text-gray-600 mb-3">{leave.reason}</p>
-                    
-                    <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500">
-                      <div className="flex items-center space-x-1">
-                        <Calendar className="h-4 w-4" />
-                        <span>{new Date(leave.startDate).toLocaleDateString()} - {new Date(leave.endDate).toLocaleDateString()}</span>
+                    <div className="flex flex-col items-end space-y-3">
+                      <div className="flex items-center space-x-2">
+                        {getStatusIcon(leave.status)}
+                        <span className={`px-3 py-1 text-sm font-medium rounded-full ${getStatusColor(leave.status)}`}>
+                          {leave.status.charAt(0).toUpperCase() + leave.status.slice(1)}
+                        </span>
                       </div>
-                      <div className="flex items-center space-x-1">
-                        <Clock className="h-4 w-4" />
-                        <span>{calculateDays(leave.startDate, leave.endDate)} days</span>
-                      </div>
-                      <div className="flex items-center space-x-1">
-                        <User className="h-4 w-4" />
-                        <span>Applied: {new Date(leave.appliedAt).toLocaleDateString()}</span>
-                      </div>
+                      {user?.role === 'admin' && leave.status === 'pending' && (
+                        <div className="flex space-x-2">
+                          <button className="px-3 py-1 text-sm bg-green-600 text-white rounded hover:bg-green-700 transition-colors">
+                            Approve
+                          </button>
+                          <button className="px-3 py-1 text-sm bg-red-600 text-white rounded hover:bg-red-700 transition-colors">
+                            Reject
+                          </button>
+                        </div>
+                      )}
                     </div>
-                  </div>
-                  
-                  <div className="flex flex-col items-end space-y-3">
-                    <div className="flex items-center space-x-2">
-                      {getStatusIcon(leave.status)}
-                      <span className={`px-3 py-1 text-sm font-medium rounded-full ${getStatusColor(leave.status)}`}>
-                        {leave.status.charAt(0).toUpperCase() + leave.status.slice(1)}
-                      </span>
-                    </div>
-                    
-                    {user?.role === 'admin' && leave.status === 'pending' && (
-                      <div className="flex space-x-2">
-                        <button className="px-3 py-1 text-sm bg-green-600 text-white rounded hover:bg-green-700 transition-colors">
-                          Approve
-                        </button>
-                        <button className="px-3 py-1 text-sm bg-red-600 text-white rounded hover:bg-red-700 transition-colors">
-                          Reject
-                        </button>
-                      </div>
-                    )}
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
-
-          {filteredLeaves.length === 0 && (
-            <div className="text-center py-12">
-              <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-500">No leave requests found matching your criteria.</p>
+              ))}
             </div>
-          )}
-        </div>
+            {filteredLeaves.length === 0 && (
+              <div className="text-center py-12">
+                <p className="text-gray-500">No leave requests found matching your criteria.</p>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Create/Review Leave Modal */}

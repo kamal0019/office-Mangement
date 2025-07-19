@@ -112,10 +112,25 @@ const LoginForm: React.FC = () => {
             </button>
           </form>
 
+          <div className="mt-4 text-center">
+            <button
+              type="button"
+              className="text-blue-600 hover:underline font-medium"
+              onClick={() => navigate('/forgot-password')}
+            >
+              Forgot Password?
+            </button>
+          </div>
+
           <div className="mt-6 text-center">
-            <p className="text-sm text-gray-600">
-              Demo credentials: admin@example.com / employee@example.com
-            </p>
+            <span className="text-gray-600">Don't have an account? </span>
+            <button
+              type="button"
+              className="text-blue-600 hover:underline font-medium"
+              onClick={() => navigate('/signup')}
+            >
+              Sign Up
+            </button>
           </div>
         </div>
       </div>

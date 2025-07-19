@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Plus, Search, Filter, DollarSign, Download, Eye, Edit, Calendar, TrendingUp } from 'lucide-react';
 import { Payroll } from '../../types';
 import { useAuth } from '../../context/AuthContext';
@@ -11,56 +11,30 @@ const PayrollManagement: React.FC = () => {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [viewPayroll, setViewPayroll] = useState<Payroll | null>(null);
   const [editPayroll, setEditPayroll] = useState<Payroll | null>(null);
-
-  const payrollRecords: Payroll[] = [
-    {
-      id: '1',
-      employeeId: '1',
-      employeeName: 'John Doe',
-      basicSalary: 5000,
-      allowances: 1000,
-      deductions: 500,
-      netSalary: 5500,
-      payPeriod: '2024-01',
-      status: 'paid',
-    },
-    {
-      id: '2',
-      employeeId: '2',
-      employeeName: 'Sarah Johnson',
-      basicSalary: 6000,
-      allowances: 1200,
-      deductions: 600,
-      netSalary: 6600,
-      payPeriod: '2024-01',
-      status: 'processed',
-    },
-    {
-      id: '3',
-      employeeId: '3',
-      employeeName: 'Mike Chen',
-      basicSalary: 7000,
-      allowances: 1400,
-      deductions: 700,
-      netSalary: 7700,
-      payPeriod: '2024-01',
-      status: 'pending',
-    },
-    {
-      id: '4',
-      employeeId: '1',
-      employeeName: 'John Doe',
-      basicSalary: 5000,
-      allowances: 1000,
-      deductions: 500,
-      netSalary: 5500,
-      payPeriod: '2023-12',
-      status: 'paid',
-    },
-  ];
+  const [payrollRecords, setPayrollRecords] = useState<Payroll[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const statuses = ['all', 'pending', 'processed', 'paid'];
-  const periods = ['all', '2024-01', '2023-12', '2023-11'];
+  const periods = ['all', '2024-01', '2023-12', '2023-11']; // You may want to fetch periods from API in future
+
+  useEffect(() => {
+    setLoading(true);
+    setError(null);
+    fetch('https://office-mangement-ss17.onrender.com/payroll')
+      .then(res => {
+        if (!res.ok) throw new Error('Failed to fetch payroll records');
+        return res.json();
+      })
+      .then(data => {
+        setPayrollRecords(data);
+        setLoading(false);
+      })
+      .catch(err => {
+        setError(err.message);
+        setLoading(false);
+      });
+  }, []);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -213,77 +187,86 @@ const PayrollManagement: React.FC = () => {
           </div>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50 border-b border-gray-200">
-              <tr>
-                <th className="text-left py-3 px-6 font-medium text-gray-900">Employee</th>
-                <th className="text-left py-3 px-6 font-medium text-gray-900">Pay Period</th>
-                <th className="text-left py-3 px-6 font-medium text-gray-900">Basic Salary</th>
-                <th className="text-left py-3 px-6 font-medium text-gray-900">Allowances</th>
-                <th className="text-left py-3 px-6 font-medium text-gray-900">Deductions</th>
-                <th className="text-left py-3 px-6 font-medium text-gray-900">Net Salary</th>
-                <th className="text-left py-3 px-6 font-medium text-gray-900">Status</th>
-                <th className="text-left py-3 px-6 font-medium text-gray-900">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {filteredPayroll.map((record) => (
-                <tr key={record.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="py-4 px-6">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center">
-                        <span className="text-sm font-semibold text-white">
-                          {record.employeeName.charAt(0)}
-                        </span>
-                      </div>
-                      <div>
-                        <p className="font-medium text-gray-900">{record.employeeName}</p>
-                        <p className="text-sm text-gray-500">ID: {record.employeeId}</p>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="py-4 px-6">
-                    <div className="flex items-center space-x-2">
-                      <Calendar className="h-4 w-4 text-gray-400" />
-                      <span className="text-gray-900">{record.payPeriod}</span>
-                    </div>
-                  </td>
-                  <td className="py-4 px-6 text-gray-900">${record.basicSalary.toLocaleString()}</td>
-                  <td className="py-4 px-6 text-green-600">${record.allowances.toLocaleString()}</td>
-                  <td className="py-4 px-6 text-red-600">${record.deductions.toLocaleString()}</td>
-                  <td className="py-4 px-6">
-                    <span className="text-lg font-semibold text-gray-900">
-                      ${record.netSalary.toLocaleString()}
-                    </span>
-                  </td>
-                  <td className="py-4 px-6">
-                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(record.status)}`}>
-                      {record.status}
-                    </span>
-                  </td>
-                  <td className="py-4 px-6">
-                    <div className="flex items-center space-x-2">
-                      <button className="p-1 text-gray-600 hover:text-blue-600 transition-colors" onClick={() => setViewPayroll(record)}>
-                        <Eye className="h-4 w-4" />
-                      </button>
-                      {user?.role === 'admin' && (
-                        <button className="p-1 text-gray-600 hover:text-green-600 transition-colors" onClick={() => setEditPayroll(record)}>
-                          <Edit className="h-4 w-4" />
-                        </button>
-                      )}
-                      <button className="p-1 text-gray-600 hover:text-purple-600 transition-colors" onClick={() => handleDownload(record)}>
-                        <Download className="h-4 w-4" />
-                      </button>
-                    </div>
-                  </td>
+        {loading ? (
+          <div className="text-center py-12">
+            <p className="text-gray-500">Loading payroll records...</p>
+          </div>
+        ) : error ? (
+          <div className="text-center py-12">
+            <p className="text-red-500">{error}</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50 border-b border-gray-200">
+                <tr>
+                  <th className="text-left py-3 px-6 font-medium text-gray-900">Employee</th>
+                  <th className="text-left py-3 px-6 font-medium text-gray-900">Pay Period</th>
+                  <th className="text-left py-3 px-6 font-medium text-gray-900">Basic Salary</th>
+                  <th className="text-left py-3 px-6 font-medium text-gray-900">Allowances</th>
+                  <th className="text-left py-3 px-6 font-medium text-gray-900">Deductions</th>
+                  <th className="text-left py-3 px-6 font-medium text-gray-900">Net Salary</th>
+                  <th className="text-left py-3 px-6 font-medium text-gray-900">Status</th>
+                  <th className="text-left py-3 px-6 font-medium text-gray-900">Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        {filteredPayroll.length === 0 && (
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {filteredPayroll.map((record) => (
+                  <tr key={record.id} className="hover:bg-gray-50 transition-colors">
+                    <td className="py-4 px-6">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center">
+                          <span className="text-sm font-semibold text-white">
+                            {record.employeeName.charAt(0)}
+                          </span>
+                        </div>
+                        <div>
+                          <p className="font-medium text-gray-900">{record.employeeName}</p>
+                          <p className="text-sm text-gray-500">ID: {record.employeeId}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="py-4 px-6">
+                      <div className="flex items-center space-x-2">
+                        <Calendar className="h-4 w-4 text-gray-400" />
+                        <span className="text-gray-900">{record.payPeriod}</span>
+                      </div>
+                    </td>
+                    <td className="py-4 px-6 text-gray-900">${record.basicSalary.toLocaleString()}</td>
+                    <td className="py-4 px-6 text-green-600">${record.allowances.toLocaleString()}</td>
+                    <td className="py-4 px-6 text-red-600">${record.deductions.toLocaleString()}</td>
+                    <td className="py-4 px-6">
+                      <span className="text-lg font-semibold text-gray-900">
+                        ${record.netSalary.toLocaleString()}
+                      </span>
+                    </td>
+                    <td className="py-4 px-6">
+                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(record.status)}`}>
+                        {record.status}
+                      </span>
+                    </td>
+                    <td className="py-4 px-6">
+                      <div className="flex items-center space-x-2">
+                        <button className="p-1 text-gray-600 hover:text-blue-600 transition-colors" onClick={() => setViewPayroll(record)}>
+                          <Eye className="h-4 w-4" />
+                        </button>
+                        {user?.role === 'admin' && (
+                          <button className="p-1 text-gray-600 hover:text-green-600 transition-colors" onClick={() => setEditPayroll(record)}>
+                            <Edit className="h-4 w-4" />
+                          </button>
+                        )}
+                        <button className="p-1 text-gray-600 hover:text-purple-600 transition-colors" onClick={() => handleDownload(record)}>
+                          <Download className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+        {filteredPayroll.length === 0 && !loading && !error && (
           <div className="text-center py-12">
             <DollarSign className="h-12 w-12 text-gray-400 mx-auto mb-4" />
             <p className="text-gray-500">No payroll records found matching your criteria.</p>
